@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>信息看板 · 天气 · 留言 · 日历</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --card: #1a2332;
+      --card-hover: #243044;
+      --border: #2d3a4f;
+      --text: #e7ecf3;
+      --text-muted: #8b9cb3;
+      --accent: #3b82f6;
+      --accent-soft: rgba(59, 130, 246, 0.15);
+      --success: #22c55e;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --radius: 12px;
+      --shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    header h1 {
+      font-size: 1.45rem;
+      font-weight: 650;
+      letter-spacing: -0.02em;
+    }
+
+    header h1 span {
+      color: var(--accent);
+      font-weight: 500;
+      font-size: 0.9rem;
+      margin-left: 8px;
+    }
+
+    .header-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    button, .btn {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    button:hover, .btn:hover {
+      background: var(--card-hover);
+      border-color: #3d4f6a;
+    }
+
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    button.primary:hover {
+      background: #2563eb;
+      border-color: #2563eb;
+    }
+
+    button.danger {
+      background: transparent;
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    button.danger:hover {
+      background: rgba(239, 68, 68, 0.15);
+    }
+
+    button.small {
+      padding: 4px 10px;
+      font-size: 0.8rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+
+    @media (min-width: 900px) {
+      .grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      .full-width {
+        grid-column: 1 / -1;
+      }
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .card h2 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card h2 .badge {
+      font-size: 0.7rem;
+      font-weight: 500;
+      background: var(--accent-soft);
+      color: var(--accent);
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+
+    /* Weather */
+    .weather-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+    }
+
+    .weather-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .weather-item .city {
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin-bottom: 6px;
+    }
+
+    .weather-item .temp {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .weather-item .desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin: 4px 0;
+    }
+
+    .weather-item .detail {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .weather-item .forecast {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px dashed var(--border);
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      text-align: left;
+    }
+
+    .weather-status {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    /* Message board */
+    .msg-form {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .msg-form input, .msg-form textarea,
+    .import-area textarea, .todo-form input, .todo-form textarea,
+    .calendar-note input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: var(--text);
+      font-size: 0.9rem;
+      font-family: inherit;
+      resize: vertical;
+    }
+
+    .msg-form input:focus, .msg-form textarea:focus,
+    .import-area textarea:focus, .todo-form input:focus,
+    .todo-form textarea:focus, .calendar-note input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .msg-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 480px;
+      overflow-y: auto;
+    }
+
+    .msg-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+
+    .msg-item .meta {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 6px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .msg-item .author {
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .msg-item .content {
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin-bottom: 8px;
+    }
+
+    .msg-item .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .replies {
+      margin-top: 10px;
+      padding-left: 12px;
+      border-left: 2px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .reply-item {
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 0.88rem;
+    }
+
+    .reply-form {
+      margin-top: 8px;
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .reply-form.show { display: flex; }
+
+    /* Calendar & Todos */
+    .cal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .cal-header .month-title {
+      font-weight: 600;
+      font-size: 1rem;
+    }
+
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+      margin-bottom: 14px;
+    }
+
+    .cal-weekday {
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      padding: 4px 0;
+    }
+
+    .cal-day {
+      aspect-ratio: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      border: 1px solid transparent;
+      position: relative;
+      background: transparent;
+    }
+
+    .cal-day:hover { background: var(--card-hover); }
+    .cal-day.other { color: var(--text-muted); opacity: 0.45; }
+    .cal-day.today {
+      border-color: var(--accent);
+      font-weight: 700;
+    }
+    .cal-day.selected {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+    }
+    .cal-day.has-note::after {
+      content: "";
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--warning);
+      position: absolute;
+      bottom: 4px;
+    }
+
+    .day-panel {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 14px;
+    }
+
+    .day-panel h3 {
+      font-size: 0.9rem;
+      margin-bottom: 8px;
+      color: var(--text-muted);
+    }
+
+    .todo-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+
+    .todo-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+
+    .todo-item.done .todo-text {
+      text-decoration: line-through;
+      color: var(--text-muted);
+    }
+
+    .todo-item input[type="checkbox"] {
+      margin-top: 3px;
+      accent-color: var(--accent);
+    }
+
+    .todo-text {
+      flex: 1;
+      font-size: 0.9rem;
+      word-break: break-word;
+    }
+
+    .todo-meta {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .todo-form {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    /* Import / Export */
+    .io-section {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .io-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .import-area textarea {
+      min-height: 100px;
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      font-size: 0.8rem;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 12px 18px;
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      font-size: 0.9rem;
+      z-index: 100;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.25s, transform 0.25s;
+      pointer-events: none;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .toast.success { border-color: var(--success); }
+    .toast.error { border-color: var(--danger); }
+
+    footer {
+      margin-top: 28px;
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    footer a { color: var(--accent); text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>信息看板 <span id="clock"></span></h1>
+      <div class="header-actions">
+        <button type="button" id="btn-refresh-weather">刷新天气</button>
+        <button type="button" class="primary" id="btn-export">下载 JSON</button>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- 天气 -->
+      <section class="card full-width">
+        <h2>天气预报与实况 <span class="badge" id="weather-refresh-badge">定时刷新</span></h2>
+        <p class="weather-status" id="weather-status">正在加载天气…</p>
+        <div class="weather-grid" id="weather-grid"></div>
+      </section>
+
+      <!-- 留言板 -->
+      <section class="card">
+        <h2>留言板</h2>
+        <div class="msg-form">
+          <input type="text" id="msg-author" placeholder="昵称（可选，默认匿名）" maxlength="30" />
+          <textarea id="msg-content" placeholder="写点什么…" rows="3" maxlength="1000"></textarea>
+          <button type="button" class="primary" id="btn-add-msg">发布留言</button>
+        </div>
+        <div class="msg-list" id="msg-list"></div>
+      </section>
+
+      <!-- 日历与待办 -->
+      <section class="card">
+        <h2>日历与待办</h2>
+        <div class="cal-header">
+          <button type="button" class="small" id="cal-prev">‹</button>
+          <span class="month-title" id="cal-month-title"></span>
+          <button type="button" class="small" id="cal-next">›</button>
+        </div>
+        <div class="cal-grid" id="cal-weekdays"></div>
+        <div class="cal-grid" id="cal-days"></div>
+
+        <div class="day-panel" id="day-panel">
+          <h3 id="day-panel-title">选择日期查看备注</h3>
+          <div id="day-notes"></div>
+          <div class="calendar-note" style="margin-top:8px;display:flex;gap:8px;">
+            <input type="text" id="day-note-input" placeholder="添加当日备注…" maxlength="200" />
+            <button type="button" class="small primary" id="btn-add-note">添加</button>
+          </div>
+        </div>
+
+        <h3 style="font-size:0.95rem;margin:12px 0 8px;">待办事项</h3>
+        <div class="todo-list" id="todo-list"></div>
+        <div class="todo-form">
+          <input type="text" id="todo-title" placeholder="待办标题" maxlength="100" />
+          <textarea id="todo-note" placeholder="备注（可选）" rows="2" maxlength="300"></textarea>
+          <button type="button" class="primary" id="btn-add-todo">添加待办</button>
+        </div>
+      </section>
+
+      <!-- 数据导入导出 -->
+      <section class="card full-width">
+        <h2>数据导入 / 导出</h2>
+        <div class="io-section">
+          <p style="font-size:0.85rem;color:var(--text-muted);">
+            可下载当前留言与日历/待办数据（JSON），也可粘贴 JSON 后点击「导入更新」覆盖本地数据。
+          </p>
+          <div class="io-row">
+            <button type="button" class="primary" id="btn-download-json">下载当前数据 (JSON)</button>
+            <button type="button" id="btn-copy-json">复制到剪贴板</button>
+          </div>
+          <div class="import-area">
+            <textarea id="import-json" placeholder='在此粘贴 JSON 数据，例如：{"messages":[...],"calendarNotes":{...},"todos":[...]}'></textarea>
+            <div class="io-row" style="margin-top:8px;">
+              <button type="button" class="primary" id="btn-import">导入更新</button>
+              <button type="button" class="danger" id="btn-clear-all">清空全部本地数据</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <footer>
+      天气数据来源 <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>（非商业免费）· 数据仅保存在本机浏览器 localStorage
+    </footer>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ========== 配置 ==========
+    const CITIES = [
+      { name: "北京", lat: 39.9042, lon: 116.4074 },
+      { name: "上海", lat: 31.2304, lon: 121.4737 },
+      { name: "广州", lat: 23.1291, lon: 113.2644 },
+      { name: "深圳", lat: 22.5431, lon: 114.0579 },
+      { name: "杭州", lat: 30.2741, lon: 120.1551 }
+    ];
+    const WEATHER_REFRESH_MS = 15 * 60 * 1000; // 15 分钟
+    const STORAGE_KEY = "info_dashboard_data_v1";
+
+    // WMO weather code → 中文描述
+    const WMO = {
+      0: "晴", 1: "大部晴朗", 2: "局部多云", 3: "阴",
+      45: "雾", 48: "雾凇",
+      51: "小毛毛雨", 53: "毛毛雨", 55: "大毛毛雨",
+      56: "冻毛毛雨", 57: "强冻毛毛雨",
+      61: "小雨", 63: "中雨", 65: "大雨",
+      66: "冻雨", 67: "强冻雨",
+      71: "小雪", 73: "中雪", 75: "大雪", 77: "雪粒",
+      80: "小阵雨", 81: "阵雨", 82: "强阵雨",
+      85: "小阵雪", 86: "强阵雪",
+      95: "雷阵雨", 96: "雷阵雨伴冰雹", 99: "强雷阵雨伴冰雹"
+    };
+
+    // ========== 状态 ==========
+    let state = {
+      messages: [],
+      calendarNotes: {}, // "YYYY-MM-DD": ["note1", ...]
+      todos: [],
+      calYear: new Date().getFullYear(),
+      calMonth: new Date().getMonth(), // 0-11
+      selectedDate: null // "YYYY-MM-DD"
+    };
+
+    // ========== 工具 ==========
+    function uid() {
+      return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    }
+
+    function formatTime(ts) {
+      const d = new Date(ts);
+      return d.toLocaleString("zh-CN", {
+        year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit"
+      });
+    }
+
+    function pad(n) { return String(n).padStart(2, "0"); }
+
+    function dateKey(y, m, d) {
+      return `${y}-${pad(m + 1)}-${pad(d)}`;
+    }
+
+    function todayKey() {
+      const t = new Date();
+      return dateKey(t.getFullYear(), t.getMonth(), t.getDate());
+    }
+
+    function showToast(msg, type = "success") {
+      const el = document.getElementById("toast");
+      el.textContent = msg;
+      el.className = "toast show " + type;
+      clearTimeout(showToast._t);
+      showToast._t = setTimeout(() => el.classList.remove("show"), 2800);
+    }
+
+    function saveState() {
+      const data = {
+        messages: state.messages,
+        calendarNotes: state.calendarNotes,
+        todos: state.todos
+      };
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      } catch (e) {
+        console.warn("localStorage 写入失败", e);
+      }
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        if (Array.isArray(data.messages)) state.messages = data.messages;
+        if (data.calendarNotes && typeof data.calendarNotes === "object") {
+          state.calendarNotes = data.calendarNotes;
+        }
+        if (Array.isArray(data.todos)) state.todos = data.todos;
+      } catch (e) {
+        console.warn("加载本地数据失败", e);
+      }
+    }
+
+    function getExportData() {
+      return {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        messages: state.messages,
+        calendarNotes: state.calendarNotes,
+        todos: state.todos
+      };
+    }
+
+    // ========== 时钟 ==========
+    function updateClock() {
+      const el = document.getElementById("clock");
+      el.textContent = new Date().toLocaleString("zh-CN", {
+        weekday: "short", year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit", second: "2-digit"
+      });
+    }
+
+    // ========== 天气 ==========
+    async function fetchCityWeather(city) {
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}` +
+        `&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m` +
+        `&daily=weather_code,temperature_2m_max,temperature_2m_min` +
+        `&timezone=Asia%2FShanghai&forecast_days=3`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.json();
+    }
+
+    async function loadWeather() {
+      const status = document.getElementById("weather-status");
+      const grid = document.getElementById("weather-grid");
+      status.textContent = "正在获取天气…";
+      grid.innerHTML = "";
+
+      try {
+        const results = await Promise.all(
+          CITIES.map(async (city) => {
+            const data = await fetchCityWeather(city);
+            return { city, data };
+          })
+        );
+
+        const now = new Date();
+        status.textContent = `更新于 ${now.toLocaleTimeString("zh-CN")} · 每 15 分钟自动刷新`;
+
+        results.forEach(({ city, data }) => {
+          const cur = data.current || {};
+          const daily = data.daily || {};
+          const code = cur.weather_code;
+          const desc = WMO[code] ?? `代码 ${code}`;
+
+          let forecastHtml = "";
+          if (daily.time && daily.time.length) {
+            const days = daily.time.slice(0, 3);
+            forecastHtml = days.map((t, i) => {
+              const d = new Date(t + "T12:00:00");
+              const label = i === 0 ? "今天" : i === 1 ? "明天" : "后天";
+              const max = daily.temperature_2m_max?.[i];
+              const min = daily.temperature_2m_min?.[i];
+              const wc = daily.weather_code?.[i];
+              const wdesc = WMO[wc] ?? "";
+              return `${label} ${wdesc} ${min != null ? Math.round(min) : "-"}~${max != null ? Math.round(max) : "-"}°`;
+            }).join("<br>");
+          }
+
+          const div = document.createElement("div");
+          div.className = "weather-item";
+          div.innerHTML = `
+            <div class="city">${city.name}</div>
+            <div class="temp">${cur.temperature_2m != null ? Math.round(cur.temperature_2m) + "°" : "--"}</div>
+            <div class="desc">${desc}</div>
+            <div class="detail">湿度 ${cur.relative_humidity_2m ?? "--"}% · 风 ${cur.wind_speed_10m != null ? Math.round(cur.wind_speed_10m) : "--"} km/h</div>
+            <div class="forecast">${forecastHtml}</div>
+          `;
+          grid.appendChild(div);
+        });
+      } catch (err) {
+        status.textContent = "天气获取失败：" + (err.message || err) + "。可点击「刷新天气」重试。";
+        console.error(err);
+      }
+    }
+
+    // ========== 留言板 ==========
+    function renderMessages() {
+      const list = document.getElementById("msg-list");
+      if (!state.messages.length) {
+        list.innerHTML = '<p style="color:var(--text-muted);font-size:0.9rem;">暂无留言，写一条吧～</p>';
+        return;
+      }
+
+      // 按时间倒序
+      const sorted = [...state.messages].sort((a, b) => b.createdAt - a.createdAt);
+      list.innerHTML = "";
+
+      sorted.forEach((msg) => {
+        const item = document.createElement("div");
+        item.className = "msg-item";
+        item.dataset.id = msg.id;
+
+        const repliesHtml = (msg.replies || []).map((r) => `
+          <div class="reply-item">
+            <div class="meta">
+              <span class="author">${escapeHtml(r.author || "匿名")}</span>
+              <span>${formatTime(r.createdAt)}</span>
+            </div>
+            <div class="content">${escapeHtml(r.content)}</div>
+            <div class="actions">
+              <button type="button" class="small danger" data-action="del-reply" data-msg="${msg.id}" data-reply="${r.id}">删除</button>
+            </div>
+          </div>
+        `).join("");
+
+        item.innerHTML = `
+          <div class="meta">
+            <span class="author">${escapeHtml(msg.author || "匿名")}</span>
+            <span>${formatTime(msg.createdAt)}${msg.updatedAt ? " · 已编辑" : ""}</span>
+          </div>
+          <div class="content" data-role="content">${escapeHtml(msg.content)}</div>
+          <div class="actions">
+            <button type="button" class="small" data-action="reply">跟帖</button>
+            <button type="button" class="small" data-action="edit">修改</button>
+            <button type="button" class="small danger" data-action="delete">删除</button>
+          </div>
+          <div class="reply-form" data-role="reply-form">
+            <input type="text" placeholder="昵称（可选）" data-role="reply-author" maxlength="30" />
+            <textarea placeholder="跟帖内容…" rows="2" data-role="reply-content" maxlength="500"></textarea>
+            <div style="display:flex;gap:6px;">
+              <button type="button" class="small primary" data-action="submit-reply">发送跟帖</button>
+              <button type="button" class="small" data-action="cancel-reply">取消</button>
+            </div>
+          </div>
+          <div class="replies">${repliesHtml}</div>
+        `;
+        list.appendChild(item);
+      });
+    }
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function addMessage(author, content) {
+      const msg = {
+        id: uid(),
+        author: (author || "").trim() || "匿名",
+        content: content.trim(),
+        createdAt: Date.now(),
+        replies: []
+      };
+      state.messages.push(msg);
+      saveState();
+      renderMessages();
+      showToast("留言已发布");
+    }
+
+    function updateMessage(id, content) {
+      const msg = state.messages.find((m) => m.id === id);
+      if (!msg) return;
+      msg.content = content.trim();
+      msg.updatedAt = Date.now();
+      saveState();
+      renderMessages();
+      showToast("留言已修改");
+    }
+
+    function deleteMessage(id) {
+      if (!confirm("确定删除这条留言及其所有跟帖？")) return;
+      state.messages = state.messages.filter((m) => m.id !== id);
+      saveState();
+      renderMessages();
+      showToast("留言已删除");
+    }
+
+    function addReply(msgId, author, content) {
+      const msg = state.messages.find((m) => m.id === msgId);
+      if (!msg) return;
+      if (!msg.replies) msg.replies = [];
+      msg.replies.push({
+        id: uid(),
+        author: (author || "").trim() || "匿名",
+        content: content.trim(),
+        createdAt: Date.now()
+      });
+      saveState();
+      renderMessages();
+      showToast("跟帖已发送");
+    }
+
+    function deleteReply(msgId, replyId) {
+      const msg = state.messages.find((m) => m.id === msgId);
+      if (!msg || !msg.replies) return;
+      msg.replies = msg.replies.filter((r) => r.id !== replyId);
+      saveState();
+      renderMessages();
+      showToast("跟帖已删除");
+    }
+
+    // ========== 日历 ==========
+    function renderCalendar() {
+      const title = document.getElementById("cal-month-title");
+      title.textContent = `${state.calYear} 年 ${state.calMonth + 1} 月`;
+
+      const weekdays = document.getElementById("cal-weekdays");
+      if (!weekdays.children.length) {
+        ["日", "一", "二", "三", "四", "五", "六"].forEach((w) => {
+          const d = document.createElement("div");
+          d.className = "cal-weekday";
+          d.textContent = w;
+          weekdays.appendChild(d);
+        });
+      }
+
+      const daysEl = document.getElementById("cal-days");
+      daysEl.innerHTML = "";
+
+      const first = new Date(state.calYear, state.calMonth, 1);
+      const startDow = first.getDay();
+      const daysInMonth = new Date(state.calYear, state.calMonth + 1, 0).getDate();
+      const prevDays = new Date(state.calYear, state.calMonth, 0).getDate();
+
+      const today = todayKey();
+
+      // 上月尾巴
+      for (let i = startDow - 1; i >= 0; i--) {
+        const day = prevDays - i;
+        const y = state.calMonth === 0 ? state.calYear - 1 : state.calYear;
+        const m = state.calMonth === 0 ? 11 : state.calMonth - 1;
+        const key = dateKey(y, m, day);
+        daysEl.appendChild(makeDayCell(day, key, true, key === today));
+      }
+
+      // 本月
+      for (let d = 1; d <= daysInMonth; d++) {
+        const key = dateKey(state.calYear, state.calMonth, d);
+        daysEl.appendChild(makeDayCell(d, key, false, key === today));
+      }
+
+      // 下月开头补齐 6 行
+      const total = startDow + daysInMonth;
+      const remain = total % 7 === 0 ? 0 : 7 - (total % 7);
+      for (let d = 1; d <= remain; d++) {
+        const y = state.calMonth === 11 ? state.calYear + 1 : state.calYear;
+        const m = state.calMonth === 11 ? 0 : state.calMonth + 1;
+        const key = dateKey(y, m, d);
+        daysEl.appendChild(makeDayCell(d, key, true, key === today));
+      }
+
+      renderDayPanel();
+    }
+
+    function makeDayCell(dayNum, key, other, isToday) {
+      const div = document.createElement("div");
+      div.className = "cal-day";
+      if (other) div.classList.add("other");
+      if (isToday) div.classList.add("today");
+      if (state.selectedDate === key) div.classList.add("selected");
+      if (state.calendarNotes[key] && state.calendarNotes[key].length) {
+        div.classList.add("has-note");
+      }
+      div.textContent = dayNum;
+      div.dataset.date = key;
+      div.addEventListener("click", () => {
+        state.selectedDate = key;
+        renderCalendar();
+      });
+      return div;
+    }
+
+    function renderDayPanel() {
+      const title = document.getElementById("day-panel-title");
+      const notesEl = document.getElementById("day-notes");
+      if (!state.selectedDate) {
+        title.textContent = "选择日期查看备注";
+        notesEl.innerHTML = "";
+        return;
+      }
+      title.textContent = state.selectedDate + " 的备注";
+      const notes = state.calendarNotes[state.selectedDate] || [];
+      if (!notes.length) {
+        notesEl.innerHTML = '<p style="font-size:0.85rem;color:var(--text-muted);">暂无备注</p>';
+        return;
+      }
+      notesEl.innerHTML = notes.map((n, i) => `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:0.9rem;">
+          <span style="flex:1;word-break:break-word;">${escapeHtml(n)}</span>
+          <button type="button" class="small danger" data-action="del-note" data-idx="${i}">删</button>
+        </div>
+      `).join("");
+    }
+
+    function addDayNote(text) {
+      if (!state.selectedDate) {
+        showToast("请先选择一个日期", "error");
+        return;
+      }
+      if (!state.calendarNotes[state.selectedDate]) {
+        state.calendarNotes[state.selectedDate] = [];
+      }
+      state.calendarNotes[state.selectedDate].push(text.trim());
+      saveState();
+      renderCalendar();
+      showToast("备注已添加");
+    }
+
+    function deleteDayNote(idx) {
+      if (!state.selectedDate) return;
+      const arr = state.calendarNotes[state.selectedDate];
+      if (!arr) return;
+      arr.splice(idx, 1);
+      if (!arr.length) delete state.calendarNotes[state.selectedDate];
+      saveState();
+      renderCalendar();
+      showToast("备注已删除");
+    }
+
+    // ========== 待办 ==========
+    function renderTodos() {
+      const list = document.getElementById("todo-list");
+      if (!state.todos.length) {
+        list.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;">暂无待办</p>';
+        return;
+      }
+      const sorted = [...state.todos].sort((a, b) => {
+        if (a.done !== b.done) return a.done ? 1 : -1;
+        return b.createdAt - a.createdAt;
+      });
+      list.innerHTML = sorted.map((t) => `
+        <div class="todo-item ${t.done ? "done" : ""}" data-id="${t.id}">
+          <input type="checkbox" ${t.done ? "checked" : ""} data-action="toggle-todo" />
+          <div style="flex:1;">
+            <div class="todo-text">${escapeHtml(t.title)}</div>
+            ${t.note ? `<div class="todo-meta">${escapeHtml(t.note)}</div>` : ""}
+            <div class="todo-meta">${formatTime(t.createdAt)}</div>
+          </div>
+          <button type="button" class="small danger" data-action="del-todo">删除</button>
+        </div>
+      `).join("");
+    }
+
+    function addTodo(title, note) {
+      state.todos.push({
+        id: uid(),
+        title: title.trim(),
+        note: (note || "").trim(),
+        done: false,
+        createdAt: Date.now()
+      });
+      saveState();
+      renderTodos();
+      showToast("待办已添加");
+    }
+
+    function toggleTodo(id) {
+      const t = state.todos.find((x) => x.id === id);
+      if (!t) return;
+      t.done = !t.done;
+      saveState();
+      renderTodos();
+    }
+
+    function deleteTodo(id) {
+      state.todos = state.todos.filter((x) => x.id !== id);
+      saveState();
+      renderTodos();
+      showToast("待办已删除");
+    }
+
+    // ========== 导入导出 ==========
+    function downloadJson() {
+      const data = getExportData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `info-dashboard-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast("JSON 已下载");
+    }
+
+    function copyJson() {
+      const text = JSON.stringify(getExportData(), null, 2);
+      navigator.clipboard.writeText(text).then(
+        () => showToast("已复制到剪贴板"),
+        () => showToast("复制失败，请手动选择下载", "error")
+      );
+    }
+
+    function importJson(text) {
+      try {
+        const data = JSON.parse(text);
+        if (!data || typeof data !== "object") throw new Error("根节点必须是对象");
+        if (data.messages && !Array.isArray(data.messages)) throw new Error("messages 应为数组");
+        if (data.todos && !Array.isArray(data.todos)) throw new Error("todos 应为数组");
+        if (data.calendarNotes && typeof data.calendarNotes !== "object") {
+          throw new Error("calendarNotes 应为对象");
+        }
+
+        if (Array.isArray(data.messages)) state.messages = data.messages;
+        if (data.calendarNotes) state.calendarNotes = data.calendarNotes;
+        if (Array.isArray(data.todos)) state.todos = data.todos;
+
+        saveState();
+        renderMessages();
+        renderCalendar();
+        renderTodos();
+        showToast("数据已导入并更新");
+      } catch (e) {
+        showToast("导入失败：" + (e.message || e), "error");
+      }
+    }
+
+    function clearAllData() {
+      if (!confirm("确定清空全部留言、日历备注和待办？此操作不可撤销。")) return;
+      state.messages = [];
+      state.calendarNotes = {};
+      state.todos = [];
+      saveState();
+      renderMessages();
+      renderCalendar();
+      renderTodos();
+      showToast("本地数据已清空");
+    }
+
+    // ========== 事件绑定 ==========
+    function bindEvents() {
+      // 天气
+      document.getElementById("btn-refresh-weather").addEventListener("click", loadWeather);
+
+      // 留言
+      document.getElementById("btn-add-msg").addEventListener("click", () => {
+        const author = document.getElementById("msg-author").value;
+        const content = document.getElementById("msg-content").value;
+        if (!content.trim()) {
+          showToast("请输入留言内容", "error");
+          return;
+        }
+        addMessage(author, content);
+        document.getElementById("msg-content").value = "";
+      });
+
+      document.getElementById("msg-list").addEventListener("click", (e) => {
+        const btn = e.target.closest("button");
+        if (!btn) return;
+        const item = e.target.closest(".msg-item");
+        if (!item) {
+          // 可能是删除跟帖
+          if (btn.dataset.action === "del-reply") {
+            deleteReply(btn.dataset.msg, btn.dataset.reply);
+          }
+          return;
+        }
+        const id = item.dataset.id;
+        const action = btn.dataset.action;
+
+        if (action === "delete") {
+          deleteMessage(id);
+        } else if (action === "edit") {
+          const contentEl = item.querySelector('[data-role="content"]');
+          const current = state.messages.find((m) => m.id === id)?.content || "";
+          const next = prompt("修改留言内容：", current);
+          if (next != null && next.trim()) updateMessage(id, next);
+        } else if (action === "reply") {
+          const form = item.querySelector('[data-role="reply-form"]');
+          form.classList.toggle("show");
+        } else if (action === "cancel-reply") {
+          item.querySelector('[data-role="reply-form"]').classList.remove("show");
+        } else if (action === "submit-reply") {
+          const form = item.querySelector('[data-role="reply-form"]');
+          const author = form.querySelector('[data-role="reply-author"]').value;
+          const content = form.querySelector('[data-role="reply-content"]').value;
+          if (!content.trim()) {
+            showToast("请输入跟帖内容", "error");
+            return;
+          }
+          addReply(id, author, content);
+        } else if (action === "del-reply") {
+          deleteReply(btn.dataset.msg, btn.dataset.reply);
+        }
+      });
+
+      // 日历导航
+      document.getElementById("cal-prev").addEventListener("click", () => {
+        if (state.calMonth === 0) {
+          state.calMonth = 11;
+          state.calYear--;
+        } else {
+          state.calMonth--;
+        }
+        renderCalendar();
+      });
+      document.getElementById("cal-next").addEventListener("click", () => {
+        if (state.calMonth === 11) {
+          state.calMonth = 0;
+          state.calYear++;
+        } else {
+          state.calMonth++;
+        }
+        renderCalendar();
+      });
+
+      document.getElementById("btn-add-note").addEventListener("click", () => {
+        const input = document.getElementById("day-note-input");
+        if (!input.value.trim()) {
+          showToast("请输入备注", "error");
+          return;
+        }
+        addDayNote(input.value);
+        input.value = "";
+      });
+
+      document.getElementById("day-notes").addEventListener("click", (e) => {
+        const btn = e.target.closest('[data-action="del-note"]');
+        if (!btn) return;
+        deleteDayNote(Number(btn.dataset.idx));
+      });
+
+      // 待办
+      document.getElementById("btn-add-todo").addEventListener("click", () => {
+        const title = document.getElementById("todo-title").value;
+        const note = document.getElementById("todo-note").value;
+        if (!title.trim()) {
+          showToast("请输入待办标题", "error");
+          return;
+        }
+        addTodo(title, note);
+        document.getElementById("todo-title").value = "";
+        document.getElementById("todo-note").value = "";
+      });
+
+      document.getElementById("todo-list").addEventListener("click", (e) => {
+        const item = e.target.closest(".todo-item");
+        if (!item) return;
+        const id = item.dataset.id;
+        if (e.target.dataset.action === "toggle-todo" || e.target.type === "checkbox") {
+          toggleTodo(id);
+        } else if (e.target.dataset.action === "del-todo") {
+          deleteTodo(id);
+        }
+      });
+
+      // 导入导出
+      document.getElementById("btn-export").addEventListener("click", downloadJson);
+      document.getElementById("btn-download-json").addEventListener("click", downloadJson);
+      document.getElementById("btn-copy-json").addEventListener("click", copyJson);
+      document.getElementById("btn-import").addEventListener("click", () => {
+        const text = document.getElementById("import-json").value.trim();
+        if (!text) {
+          showToast("请先粘贴 JSON 数据", "error");
+          return;
+        }
+        importJson(text);
+      });
+      document.getElementById("btn-clear-all").addEventListener("click", clearAllData);
+    }
+
+    // ========== 启动 ==========
+    function init() {
+      loadState();
+      state.selectedDate = todayKey();
+      updateClock();
+      setInterval(updateClock, 1000);
+      renderMessages();
+      renderCalendar();
+      renderTodos();
+      bindEvents();
+      loadWeather();
+      setInterval(loadWeather, WEATHER_REFRESH_MS);
+    }
+
+    init();
+  </script>
+</body>
+</html>
