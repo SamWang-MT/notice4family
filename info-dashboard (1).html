@@ -1,0 +1,1509 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>信息看板 · 天气 · 留言 · 日历</title>
+  <style>
+    /* ========== 主题变量 ========== */
+    :root, [data-theme="dark"] {
+      --bg: #0f1419;
+      --card: #1a2332;
+      --card-hover: #243044;
+      --border: #2d3a4f;
+      --text: #e7ecf3;
+      --text-muted: #8b9cb3;
+      --accent: #3b82f6;
+      --accent-soft: rgba(59, 130, 246, 0.18);
+      --success: #22c55e;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --input-bg: #0d1117;
+      --header-bg: #151c27;
+      --shadow: 0 2px 12px rgba(0,0,0,0.35);
+    }
+
+    [data-theme="light"] {
+      --bg: #f0f2f5;
+      --card: #ffffff;
+      --card-hover: #f7f8fa;
+      --border: #d8dee6;
+      --text: #1a2332;
+      --text-muted: #6b7a90;
+      --accent: #2563eb;
+      --accent-soft: rgba(37, 99, 235, 0.12);
+      --success: #16a34a;
+      --danger: #dc2626;
+      --warning: #d97706;
+      --input-bg: #f8fafc;
+      --header-bg: #ffffff;
+      --shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+
+    [data-theme="eye-care"] {
+      --bg: #c7edcc;
+      --card: #e3f2e5;
+      --card-hover: #d4ebd7;
+      --border: #a8c9ad;
+      --text: #2c3e2d;
+      --text-muted: #5a7a5c;
+      --accent: #2d6a4f;
+      --accent-soft: rgba(45, 106, 79, 0.15);
+      --success: #40916c;
+      --danger: #b94a48;
+      --warning: #b08900;
+      --input-bg: #f0faf1;
+      --header-bg: #d8edd9;
+      --shadow: 0 2px 10px rgba(45, 106, 79, 0.12);
+    }
+
+    [data-theme="sepia"] {
+      --bg: #f4ecd8;
+      --card: #faf6eb;
+      --card-hover: #f0e6d0;
+      --border: #d4c4a8;
+      --text: #3d3226;
+      --text-muted: #7a6b56;
+      --accent: #8b5e3c;
+      --accent-soft: rgba(139, 94, 60, 0.15);
+      --success: #5a7a3a;
+      --danger: #a3443a;
+      --warning: #b8860b;
+      --input-bg: #fdf9f0;
+      --header-bg: #efe6d2;
+      --shadow: 0 2px 10px rgba(61, 50, 38, 0.1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden; /* 禁止整页滚动 */
+    }
+
+    body {
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+      font-size: 14px;
+    }
+
+    /* ========== 整体布局：固定视口，无整页滚动 ========== */
+    .app {
+      height: 100vh;
+      width: 100vw;
+      max-width: 100%;
+      display: grid;
+      grid-template-rows: auto minmax(0, 20%) minmax(0, 1fr) auto;
+      grid-template-columns: 1fr 320px;
+      gap: 8px;
+      padding: 8px 10px;
+      overflow: hidden;
+    }
+
+    /* 顶栏跨两列 */
+    .app > header {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--header-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 6px 14px;
+      box-shadow: var(--shadow);
+      min-height: 42px;
+      flex-shrink: 0;
+    }
+
+    header .title {
+      font-size: 1.05rem;
+      font-weight: 650;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    header .title .clock {
+      font-weight: 500;
+      font-size: 0.88rem;
+      color: var(--accent);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* 天气：左上，约 20% 高度 */
+    .weather-panel {
+      grid-column: 1;
+      grid-row: 2;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    /* 日历：右上 */
+    .calendar-panel {
+      grid-column: 2;
+      grid-row: 2;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    /* 留言：左下主区域 */
+    .message-panel {
+      grid-column: 1;
+      grid-row: 3;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    /* 待办：右下 */
+    .todo-panel {
+      grid-column: 2;
+      grid-row: 3;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    /* 底部导入导出：跨两列 */
+    .io-bar {
+      grid-column: 1 / -1;
+      grid-row: 4;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 6px;
+      background: var(--header-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      flex-shrink: 0;
+    }
+
+    /* ========== 卡片通用 ========== */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 10px;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+      height: 100%;
+    }
+
+    .card h2 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .card h2 .badge {
+      font-size: 0.65rem;
+      font-weight: 500;
+      background: var(--accent-soft);
+      color: var(--accent);
+      padding: 1px 7px;
+      border-radius: 999px;
+    }
+
+    /* ========== 按钮 ========== */
+    button, .btn {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      padding: 5px 11px;
+      border-radius: 7px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+    button:hover { background: var(--card-hover); border-color: var(--accent); }
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    button.primary:hover { filter: brightness(1.08); }
+    button.danger {
+      background: transparent;
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+    button.danger:hover { background: rgba(239, 68, 68, 0.12); }
+    button.small { padding: 2px 8px; font-size: 0.72rem; }
+
+    /* ========== 天气 ========== */
+    .weather-status {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      flex-shrink: 0;
+    }
+
+    .weather-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .weather-item {
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 8px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .weather-item .city {
+      font-weight: 600;
+      font-size: 0.85rem;
+      margin-bottom: 2px;
+    }
+
+    .weather-item .icon-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .weather-item .icon {
+      font-size: 1.6rem;
+      line-height: 1;
+    }
+
+    .weather-item .temp {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .weather-item .desc {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    .weather-item .detail {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .weather-item .forecast {
+      margin-top: 4px;
+      padding-top: 4px;
+      border-top: 1px dashed var(--border);
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      text-align: left;
+      line-height: 1.35;
+    }
+
+    /* ========== 日历 ========== */
+    .cal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+      flex-shrink: 0;
+    }
+    .cal-header .month-title {
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 2px;
+      flex-shrink: 0;
+    }
+
+    .cal-weekday {
+      text-align: center;
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      padding: 2px 0;
+    }
+
+    .cal-day {
+      aspect-ratio: 1;
+      max-height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 5px;
+      font-size: 0.72rem;
+      cursor: pointer;
+      border: 1px solid transparent;
+      position: relative;
+    }
+    .cal-day:hover { background: var(--card-hover); }
+    .cal-day.other { color: var(--text-muted); opacity: 0.4; }
+    .cal-day.today { border-color: var(--accent); font-weight: 700; }
+    .cal-day.selected { background: var(--accent-soft); border-color: var(--accent); }
+    .cal-day.has-note::after {
+      content: "";
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--warning);
+      position: absolute;
+      bottom: 2px;
+    }
+
+    .day-panel {
+      margin-top: 4px;
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-top: 1px solid var(--border);
+      padding-top: 4px;
+    }
+    .day-panel h3 {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 3px;
+      flex-shrink: 0;
+    }
+    #day-notes {
+      flex: 1;
+      overflow-y: auto;
+      font-size: 0.78rem;
+      min-height: 0;
+    }
+    .calendar-note {
+      display: flex;
+      gap: 4px;
+      margin-top: 4px;
+      flex-shrink: 0;
+    }
+    .calendar-note input {
+      flex: 1;
+      min-width: 0;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 8px;
+      color: var(--text);
+      font-size: 0.78rem;
+    }
+
+    /* ========== 留言板 ========== */
+    .msg-list {
+      flex: 1;
+      overflow-y: auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-right: 2px;
+    }
+
+    .msg-item {
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      flex-shrink: 0;
+    }
+    .msg-item .meta {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 4px;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .msg-item .author { font-weight: 600; color: var(--accent); }
+    .msg-item .content {
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin-bottom: 6px;
+      line-height: 1.5;
+    }
+    .msg-item .actions { display: flex; flex-wrap: wrap; gap: 4px; }
+
+    .replies {
+      margin-top: 6px;
+      padding-left: 10px;
+      border-left: 2px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .reply-item {
+      background: rgba(128,128,128,0.06);
+      border-radius: 6px;
+      padding: 5px 8px;
+      font-size: 0.82rem;
+    }
+    .reply-form {
+      margin-top: 6px;
+      display: none;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .reply-form.show { display: flex; }
+
+    /* 发布区固定在留言面板底部 */
+    .msg-compose {
+      flex-shrink: 0;
+      border-top: 1px solid var(--border);
+      padding-top: 6px;
+      margin-top: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .style-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.72rem;
+    }
+    .style-bar label { color: var(--text-muted); }
+    .style-bar select, .style-bar input[type="color"] {
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      color: var(--text);
+      font-size: 0.72rem;
+      padding: 2px 4px;
+      height: 26px;
+    }
+    .style-bar input[type="color"] {
+      width: 32px;
+      padding: 1px;
+      cursor: pointer;
+    }
+
+    .emoji-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2px;
+    }
+    .emoji-bar button {
+      padding: 2px 5px;
+      font-size: 1rem;
+      line-height: 1.2;
+      border: none;
+      background: transparent;
+    }
+    .emoji-bar button:hover { background: var(--accent-soft); border-radius: 4px; }
+
+    .msg-compose input[type="text"],
+    .msg-compose textarea,
+    .todo-form input,
+    .todo-form textarea,
+    .reply-form input,
+    .reply-form textarea {
+      width: 100%;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 8px;
+      color: var(--text);
+      font-size: 0.85rem;
+      font-family: inherit;
+      resize: none;
+    }
+    .msg-compose textarea { min-height: 48px; max-height: 72px; }
+    .msg-compose input:focus, .msg-compose textarea:focus,
+    .todo-form input:focus, .todo-form textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .compose-row {
+      display: flex;
+      gap: 6px;
+      align-items: flex-end;
+    }
+    .compose-row input[type="text"] { flex: 0 0 100px; }
+    .compose-row textarea { flex: 1; min-width: 0; }
+
+    /* ========== 待办 ========== */
+    .todo-list {
+      flex: 1;
+      overflow-y: auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .todo-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 6px 8px;
+      flex-shrink: 0;
+    }
+    .todo-item.done .todo-text { text-decoration: line-through; color: var(--text-muted); }
+    .todo-item input[type="checkbox"] { margin-top: 2px; accent-color: var(--accent); }
+    .todo-text { flex: 1; font-size: 0.82rem; word-break: break-word; }
+    .todo-meta { font-size: 0.65rem; color: var(--text-muted); }
+
+    .todo-form {
+      flex-shrink: 0;
+      border-top: 1px solid var(--border);
+      padding-top: 6px;
+      margin-top: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .todo-form textarea { min-height: 32px; max-height: 48px; }
+
+    /* ========== 弹窗 ========== */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      width: min(520px, 92vw);
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: var(--shadow);
+    }
+    .modal h3 { font-size: 1rem; margin-bottom: 10px; }
+    .modal textarea {
+      width: 100%;
+      min-height: 160px;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      color: var(--text);
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      font-size: 0.78rem;
+      resize: vertical;
+    }
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    /* 页面设置下拉 */
+    .settings-dropdown {
+      position: relative;
+    }
+    .settings-menu {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 100%;
+      margin-top: 4px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px;
+      min-width: 160px;
+      box-shadow: var(--shadow);
+      z-index: 50;
+    }
+    .settings-menu.show { display: block; }
+    .settings-menu label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 6px;
+      cursor: pointer;
+      border-radius: 5px;
+      font-size: 0.82rem;
+    }
+    .settings-menu label:hover { background: var(--card-hover); }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 10px 16px;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      font-size: 0.85rem;
+      z-index: 300;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.25s, transform 0.25s;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.success { border-color: var(--success); }
+    .toast.error { border-color: var(--danger); }
+
+    /* 宽屏微调：更大时天气/日历更舒展 */
+    @media (min-width: 1400px) {
+      .app { grid-template-columns: 1fr 360px; gap: 10px; padding: 10px 14px; }
+      .weather-item .icon { font-size: 1.85rem; }
+      .weather-item .temp { font-size: 1.5rem; }
+    }
+    @media (max-width: 900px) {
+      /* 窄屏时允许纵向，但尽量保持结构 */
+      html, body { overflow: auto; height: auto; }
+      .app {
+        height: auto;
+        min-height: 100vh;
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto auto auto auto;
+      }
+      .weather-panel { grid-column: 1; grid-row: 2; }
+      .calendar-panel { grid-column: 1; grid-row: 3; max-height: 280px; }
+      .message-panel { grid-column: 1; grid-row: 4; min-height: 320px; }
+      .todo-panel { grid-column: 1; grid-row: 5; min-height: 220px; }
+      .io-bar { grid-column: 1; grid-row: 6; }
+      .weather-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- 顶栏 -->
+    <header>
+      <div class="title">
+        信息看板
+        <span class="clock" id="clock"></span>
+      </div>
+      <div class="header-actions">
+        <button type="button" id="btn-refresh-weather" class="small">刷新天气</button>
+        <div class="settings-dropdown">
+          <button type="button" id="btn-settings" class="small">页面设置 ▾</button>
+          <div class="settings-menu" id="settings-menu">
+            <label><input type="radio" name="theme" value="dark" checked /> 深色</label>
+            <label><input type="radio" name="theme" value="light" /> 浅色</label>
+            <label><input type="radio" name="theme" value="eye-care" /> 护眼绿</label>
+            <label><input type="radio" name="theme" value="sepia" /> 羊皮纸</label>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- 天气 -->
+    <section class="card weather-panel">
+      <h2>天气信息 <span class="badge" id="weather-refresh-badge">15分钟刷新</span></h2>
+      <p class="weather-status" id="weather-status">正在加载…</p>
+      <div class="weather-grid" id="weather-grid"></div>
+    </section>
+
+    <!-- 日历 -->
+    <section class="card calendar-panel">
+      <h2>日历</h2>
+      <div class="cal-header">
+        <button type="button" class="small" id="cal-prev">‹</button>
+        <span class="month-title" id="cal-month-title"></span>
+        <button type="button" class="small" id="cal-next">›</button>
+      </div>
+      <div class="cal-grid" id="cal-weekdays"></div>
+      <div class="cal-grid" id="cal-days"></div>
+      <div class="day-panel">
+        <h3 id="day-panel-title">选择日期</h3>
+        <div id="day-notes"></div>
+        <div class="calendar-note">
+          <input type="text" id="day-note-input" placeholder="当日备注…" maxlength="200" />
+          <button type="button" class="small primary" id="btn-add-note">加</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 留言 -->
+    <section class="card message-panel">
+      <h2>留言板</h2>
+      <div class="msg-list" id="msg-list"></div>
+      <div class="msg-compose">
+        <div class="style-bar">
+          <label>字体
+            <select id="msg-font">
+              <option value="'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif">默认</option>
+              <option value="'Microsoft YaHei', sans-serif">雅黑</option>
+              <option value="'SimSun', '宋体', serif">宋体</option>
+              <option value="'KaiTi', '楷体', serif">楷体</option>
+              <option value="'Courier New', Consolas, monospace">等宽</option>
+              <option value="Georgia, 'Times New Roman', serif">衬线</option>
+            </select>
+          </label>
+          <label>大小
+            <select id="msg-size">
+              <option value="12px">小</option>
+              <option value="14px" selected>中</option>
+              <option value="16px">大</option>
+              <option value="18px">较大</option>
+              <option value="20px">很大</option>
+            </select>
+          </label>
+          <label>颜色 <input type="color" id="msg-color" value="#e7ecf3" /></label>
+        </div>
+        <div class="emoji-bar" id="emoji-bar" title="点击插入表情"></div>
+        <div class="compose-row">
+          <input type="text" id="msg-author" placeholder="昵称" maxlength="30" />
+          <textarea id="msg-content" placeholder="写点什么… 可点上方表情" rows="2" maxlength="2000"></textarea>
+          <button type="button" class="primary" id="btn-add-msg">发布</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 待办 -->
+    <section class="card todo-panel">
+      <h2>待办与提醒</h2>
+      <div class="todo-list" id="todo-list"></div>
+      <div class="todo-form">
+        <input type="text" id="todo-title" placeholder="待办标题" maxlength="100" />
+        <textarea id="todo-note" placeholder="备注（可选）" rows="1" maxlength="300"></textarea>
+        <button type="button" class="primary" id="btn-add-todo">添加待办</button>
+      </div>
+    </section>
+
+    <!-- 底部导入导出 -->
+    <div class="io-bar">
+      <button type="button" class="primary" id="btn-export">导出数据 (JSON 下载)</button>
+      <button type="button" id="btn-import-open">导入数据</button>
+      <button type="button" class="danger" id="btn-clear-all">清空本地数据</button>
+    </div>
+  </div>
+
+  <!-- 导入弹窗 -->
+  <div class="modal-overlay" id="import-modal">
+    <div class="modal">
+      <h3>导入 JSON 数据</h3>
+      <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:8px;">
+        粘贴之前导出的 JSON，将覆盖当前留言、日历备注与待办。
+      </p>
+      <textarea id="import-json" placeholder='{"messages":[],"calendarNotes":{},"todos":[]}'></textarea>
+      <div class="modal-actions">
+        <button type="button" id="btn-import-cancel">取消</button>
+        <button type="button" class="primary" id="btn-import-confirm">确认导入</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ========== 配置 ==========
+    const CITIES = [
+      { name: "Burnaby", lat: 49.2488, lon: -122.9805 },
+      { name: "Montreal", lat: 45.5017, lon: -73.5673 },
+      { name: "上海", lat: 31.2304, lon: 121.4737 },
+      { name: "连云港", lat: 34.5969, lon: 119.2215 }
+    ];
+    const WEATHER_REFRESH_MS = 15 * 60 * 1000;
+    const STORAGE_KEY = "info_dashboard_data_v2";
+    const THEME_KEY = "info_dashboard_theme";
+
+    // WMO → 中文 + 图标（emoji）
+    const WMO_MAP = {
+      0:  { text: "晴", icon: "☀️" },
+      1:  { text: "大部晴朗", icon: "🌤️" },
+      2:  { text: "局部多云", icon: "⛅" },
+      3:  { text: "阴", icon: "☁️" },
+      45: { text: "雾", icon: "🌫️" },
+      48: { text: "雾凇", icon: "🌫️" },
+      51: { text: "小毛毛雨", icon: "🌦️" },
+      53: { text: "毛毛雨", icon: "🌦️" },
+      55: { text: "大毛毛雨", icon: "🌧️" },
+      56: { text: "冻毛毛雨", icon: "🌧️" },
+      57: { text: "强冻毛毛雨", icon: "🌧️" },
+      61: { text: "小雨", icon: "🌧️" },
+      63: { text: "中雨", icon: "🌧️" },
+      65: { text: "大雨", icon: "🌧️" },
+      66: { text: "冻雨", icon: "🌨️" },
+      67: { text: "强冻雨", icon: "🌨️" },
+      71: { text: "小雪", icon: "🌨️" },
+      73: { text: "中雪", icon: "❄️" },
+      75: { text: "大雪", icon: "❄️" },
+      77: { text: "雪粒", icon: "🌨️" },
+      80: { text: "小阵雨", icon: "🌦️" },
+      81: { text: "阵雨", icon: "🌦️" },
+      82: { text: "强阵雨", icon: "⛈️" },
+      85: { text: "小阵雪", icon: "🌨️" },
+      86: { text: "强阵雪", icon: "❄️" },
+      95: { text: "雷阵雨", icon: "⛈️" },
+      96: { text: "雷阵雨伴冰雹", icon: "⛈️" },
+      99: { text: "强雷阵雨伴冰雹", icon: "⛈️" }
+    };
+
+    const EMOJIS = [
+      "😀","😂","🥰","😎","🤔","😢","😡","👍","👏","🙏",
+      "❤️","🔥","⭐","🎉","✅","❌","📌","💡","🌈","☕",
+      "🌸","🐱","🐶","🍀","🎵","📷","🚀","💪","🤝","🌟"
+    ];
+
+    // ========== 状态 ==========
+    let state = {
+      messages: [],
+      calendarNotes: {},
+      todos: [],
+      calYear: new Date().getFullYear(),
+      calMonth: new Date().getMonth(),
+      selectedDate: null
+    };
+
+    // ========== 工具 ==========
+    function uid() {
+      return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    }
+    function formatTime(ts) {
+      return new Date(ts).toLocaleString("zh-CN", {
+        year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit"
+      });
+    }
+    function pad(n) { return String(n).padStart(2, "0"); }
+    function dateKey(y, m, d) { return `${y}-${pad(m + 1)}-${pad(d)}`; }
+    function todayKey() {
+      const t = new Date();
+      return dateKey(t.getFullYear(), t.getMonth(), t.getDate());
+    }
+    function escapeHtml(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+    function showToast(msg, type = "success") {
+      const el = document.getElementById("toast");
+      el.textContent = msg;
+      el.className = "toast show " + type;
+      clearTimeout(showToast._t);
+      showToast._t = setTimeout(() => el.classList.remove("show"), 2600);
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          messages: state.messages,
+          calendarNotes: state.calendarNotes,
+          todos: state.todos
+        }));
+      } catch (e) { console.warn(e); }
+    }
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        if (Array.isArray(data.messages)) state.messages = data.messages;
+        if (data.calendarNotes && typeof data.calendarNotes === "object") state.calendarNotes = data.calendarNotes;
+        if (Array.isArray(data.todos)) state.todos = data.todos;
+      } catch (e) { console.warn(e); }
+    }
+
+    function getExportData() {
+      return {
+        version: 2,
+        exportedAt: new Date().toISOString(),
+        messages: state.messages,
+        calendarNotes: state.calendarNotes,
+        todos: state.todos
+      };
+    }
+
+    // ========== 主题 ==========
+    function applyTheme(name) {
+      document.documentElement.setAttribute("data-theme", name);
+      try { localStorage.setItem(THEME_KEY, name); } catch (e) {}
+      // 同步颜色选择器默认值
+      const colorInput = document.getElementById("msg-color");
+      if (colorInput) {
+        const map = { dark: "#e7ecf3", light: "#1a2332", "eye-care": "#2c3e2d", sepia: "#3d3226" };
+        if (!colorInput.dataset.userSet) colorInput.value = map[name] || "#e7ecf3";
+      }
+    }
+    function loadTheme() {
+      let t = "dark";
+      try { t = localStorage.getItem(THEME_KEY) || "dark"; } catch (e) {}
+      applyTheme(t);
+      const radio = document.querySelector(`input[name="theme"][value="${t}"]`);
+      if (radio) radio.checked = true;
+    }
+
+    // ========== 时钟 ==========
+    function updateClock() {
+      document.getElementById("clock").textContent = new Date().toLocaleString("zh-CN", {
+        weekday: "short", year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit", second: "2-digit"
+      });
+    }
+
+    // ========== 天气 ==========
+    function wmoInfo(code) {
+      return WMO_MAP[code] || { text: `代码 ${code}`, icon: "🌡️" };
+    }
+
+    async function fetchCityWeather(city) {
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}` +
+        `&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m` +
+        `&daily=weather_code,temperature_2m_max,temperature_2m_min` +
+        `&timezone=auto&forecast_days=3`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.json();
+    }
+
+    async function loadWeather() {
+      const status = document.getElementById("weather-status");
+      const grid = document.getElementById("weather-grid");
+      status.textContent = "正在获取天气…";
+      grid.innerHTML = "";
+      try {
+        const results = await Promise.all(
+          CITIES.map(async (city) => ({ city, data: await fetchCityWeather(city) }))
+        );
+        status.textContent = `更新于 ${new Date().toLocaleTimeString("zh-CN")} · 每 15 分钟自动刷新`;
+        results.forEach(({ city, data }) => {
+          const cur = data.current || {};
+          const daily = data.daily || {};
+          const info = wmoInfo(cur.weather_code);
+          let forecastHtml = "";
+          if (daily.time && daily.time.length) {
+            forecastHtml = daily.time.slice(0, 3).map((t, i) => {
+              const label = i === 0 ? "今天" : i === 1 ? "明天" : "后天";
+              const max = daily.temperature_2m_max?.[i];
+              const min = daily.temperature_2m_min?.[i];
+              const wi = wmoInfo(daily.weather_code?.[i]);
+              return `${label} ${wi.icon}${wi.text} ${min != null ? Math.round(min) : "-"}~${max != null ? Math.round(max) : "-"}°`;
+            }).join("<br>");
+          }
+          const div = document.createElement("div");
+          div.className = "weather-item";
+          div.innerHTML = `
+            <div class="city">${escapeHtml(city.name)}</div>
+            <div class="icon-row">
+              <span class="icon">${info.icon}</span>
+              <span class="temp">${cur.temperature_2m != null ? Math.round(cur.temperature_2m) + "°" : "--"}</span>
+            </div>
+            <div class="desc">${info.text}</div>
+            <div class="detail">湿度 ${cur.relative_humidity_2m ?? "--"}% · 风 ${cur.wind_speed_10m != null ? Math.round(cur.wind_speed_10m) : "--"} km/h</div>
+            <div class="forecast">${forecastHtml}</div>
+          `;
+          grid.appendChild(div);
+        });
+      } catch (err) {
+        status.textContent = "天气获取失败：" + (err.message || err) + "，可点「刷新天气」重试";
+        console.error(err);
+      }
+    }
+
+    // ========== 留言 ==========
+    function getComposeStyle() {
+      return {
+        fontFamily: document.getElementById("msg-font").value,
+        fontSize: document.getElementById("msg-size").value,
+        color: document.getElementById("msg-color").value
+      };
+    }
+
+    function renderMessages() {
+      const list = document.getElementById("msg-list");
+      if (!state.messages.length) {
+        list.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;padding:8px;">暂无留言</p>';
+        return;
+      }
+      const sorted = [...state.messages].sort((a, b) => b.createdAt - a.createdAt);
+      list.innerHTML = "";
+      sorted.forEach((msg) => {
+        const style = msg.style || {};
+        const styleAttr = [
+          style.fontFamily ? `font-family:${style.fontFamily}` : "",
+          style.fontSize ? `font-size:${style.fontSize}` : "",
+          style.color ? `color:${style.color}` : ""
+        ].filter(Boolean).join(";");
+
+        const repliesHtml = (msg.replies || []).map((r) => `
+          <div class="reply-item">
+            <div class="meta">
+              <span class="author">${escapeHtml(r.author || "匿名")}</span>
+              <span>${formatTime(r.createdAt)}</span>
+            </div>
+            <div class="content">${escapeHtml(r.content)}</div>
+            <div class="actions">
+              <button type="button" class="small danger" data-action="del-reply" data-msg="${msg.id}" data-reply="${r.id}">删除</button>
+            </div>
+          </div>
+        `).join("");
+
+        const item = document.createElement("div");
+        item.className = "msg-item";
+        item.dataset.id = msg.id;
+        item.innerHTML = `
+          <div class="meta">
+            <span class="author">${escapeHtml(msg.author || "匿名")}</span>
+            <span>${formatTime(msg.createdAt)}${msg.updatedAt ? " · 已编辑" : ""}</span>
+          </div>
+          <div class="content" data-role="content" style="${styleAttr}">${escapeHtml(msg.content)}</div>
+          <div class="actions">
+            <button type="button" class="small" data-action="reply">跟帖</button>
+            <button type="button" class="small" data-action="edit">修改</button>
+            <button type="button" class="small danger" data-action="delete">删除</button>
+          </div>
+          <div class="reply-form" data-role="reply-form">
+            <input type="text" placeholder="昵称" data-role="reply-author" maxlength="30" />
+            <textarea placeholder="跟帖内容…" rows="2" data-role="reply-content" maxlength="500"></textarea>
+            <div style="display:flex;gap:6px;">
+              <button type="button" class="small primary" data-action="submit-reply">发送</button>
+              <button type="button" class="small" data-action="cancel-reply">取消</button>
+            </div>
+          </div>
+          <div class="replies">${repliesHtml}</div>
+        `;
+        list.appendChild(item);
+      });
+    }
+
+    function addMessage(author, content, style) {
+      state.messages.push({
+        id: uid(),
+        author: (author || "").trim() || "匿名",
+        content: content.trim(),
+        style: style || {},
+        createdAt: Date.now(),
+        replies: []
+      });
+      saveState();
+      renderMessages();
+      showToast("留言已发布");
+    }
+
+    function updateMessage(id, content) {
+      const msg = state.messages.find((m) => m.id === id);
+      if (!msg) return;
+      msg.content = content.trim();
+      msg.updatedAt = Date.now();
+      saveState();
+      renderMessages();
+      showToast("留言已修改");
+    }
+
+    function deleteMessage(id) {
+      if (!confirm("确定删除这条留言及其跟帖？")) return;
+      state.messages = state.messages.filter((m) => m.id !== id);
+      saveState();
+      renderMessages();
+      showToast("留言已删除");
+    }
+
+    function addReply(msgId, author, content) {
+      const msg = state.messages.find((m) => m.id === msgId);
+      if (!msg) return;
+      if (!msg.replies) msg.replies = [];
+      msg.replies.push({
+        id: uid(),
+        author: (author || "").trim() || "匿名",
+        content: content.trim(),
+        createdAt: Date.now()
+      });
+      saveState();
+      renderMessages();
+      showToast("跟帖已发送");
+    }
+
+    function deleteReply(msgId, replyId) {
+      const msg = state.messages.find((m) => m.id === msgId);
+      if (!msg || !msg.replies) return;
+      msg.replies = msg.replies.filter((r) => r.id !== replyId);
+      saveState();
+      renderMessages();
+      showToast("跟帖已删除");
+    }
+
+    // ========== 日历 ==========
+    function renderCalendar() {
+      document.getElementById("cal-month-title").textContent =
+        `${state.calYear} 年 ${state.calMonth + 1} 月`;
+
+      const weekdays = document.getElementById("cal-weekdays");
+      if (!weekdays.children.length) {
+        ["日","一","二","三","四","五","六"].forEach((w) => {
+          const d = document.createElement("div");
+          d.className = "cal-weekday";
+          d.textContent = w;
+          weekdays.appendChild(d);
+        });
+      }
+
+      const daysEl = document.getElementById("cal-days");
+      daysEl.innerHTML = "";
+      const first = new Date(state.calYear, state.calMonth, 1);
+      const startDow = first.getDay();
+      const daysInMonth = new Date(state.calYear, state.calMonth + 1, 0).getDate();
+      const prevDays = new Date(state.calYear, state.calMonth, 0).getDate();
+      const today = todayKey();
+
+      for (let i = startDow - 1; i >= 0; i--) {
+        const day = prevDays - i;
+        const y = state.calMonth === 0 ? state.calYear - 1 : state.calYear;
+        const m = state.calMonth === 0 ? 11 : state.calMonth - 1;
+        daysEl.appendChild(makeDayCell(day, dateKey(y, m, day), true, dateKey(y, m, day) === today));
+      }
+      for (let d = 1; d <= daysInMonth; d++) {
+        const key = dateKey(state.calYear, state.calMonth, d);
+        daysEl.appendChild(makeDayCell(d, key, false, key === today));
+      }
+      const total = startDow + daysInMonth;
+      const remain = total % 7 === 0 ? 0 : 7 - (total % 7);
+      for (let d = 1; d <= remain; d++) {
+        const y = state.calMonth === 11 ? state.calYear + 1 : state.calYear;
+        const m = state.calMonth === 11 ? 0 : state.calMonth + 1;
+        daysEl.appendChild(makeDayCell(d, dateKey(y, m, d), true, false));
+      }
+      renderDayPanel();
+    }
+
+    function makeDayCell(dayNum, key, other, isToday) {
+      const div = document.createElement("div");
+      div.className = "cal-day";
+      if (other) div.classList.add("other");
+      if (isToday) div.classList.add("today");
+      if (state.selectedDate === key) div.classList.add("selected");
+      if (state.calendarNotes[key]?.length) div.classList.add("has-note");
+      div.textContent = dayNum;
+      div.dataset.date = key;
+      div.addEventListener("click", () => {
+        state.selectedDate = key;
+        renderCalendar();
+      });
+      return div;
+    }
+
+    function renderDayPanel() {
+      const title = document.getElementById("day-panel-title");
+      const notesEl = document.getElementById("day-notes");
+      if (!state.selectedDate) {
+        title.textContent = "选择日期";
+        notesEl.innerHTML = "";
+        return;
+      }
+      title.textContent = state.selectedDate;
+      const notes = state.calendarNotes[state.selectedDate] || [];
+      if (!notes.length) {
+        notesEl.innerHTML = '<span style="color:var(--text-muted);font-size:0.75rem;">无备注</span>';
+        return;
+      }
+      notesEl.innerHTML = notes.map((n, i) => `
+        <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px;">
+          <span style="flex:1;word-break:break-word;">${escapeHtml(n)}</span>
+          <button type="button" class="small danger" data-action="del-note" data-idx="${i}">×</button>
+        </div>
+      `).join("");
+    }
+
+    function addDayNote(text) {
+      if (!state.selectedDate) { showToast("请先选择日期", "error"); return; }
+      if (!state.calendarNotes[state.selectedDate]) state.calendarNotes[state.selectedDate] = [];
+      state.calendarNotes[state.selectedDate].push(text.trim());
+      saveState();
+      renderCalendar();
+      showToast("备注已添加");
+    }
+
+    function deleteDayNote(idx) {
+      if (!state.selectedDate) return;
+      const arr = state.calendarNotes[state.selectedDate];
+      if (!arr) return;
+      arr.splice(idx, 1);
+      if (!arr.length) delete state.calendarNotes[state.selectedDate];
+      saveState();
+      renderCalendar();
+      showToast("备注已删除");
+    }
+
+    // ========== 待办 ==========
+    function renderTodos() {
+      const list = document.getElementById("todo-list");
+      if (!state.todos.length) {
+        list.innerHTML = '<p style="color:var(--text-muted);font-size:0.8rem;">暂无待办</p>';
+        return;
+      }
+      const sorted = [...state.todos].sort((a, b) => {
+        if (a.done !== b.done) return a.done ? 1 : -1;
+        return b.createdAt - a.createdAt;
+      });
+      list.innerHTML = sorted.map((t) => `
+        <div class="todo-item ${t.done ? "done" : ""}" data-id="${t.id}">
+          <input type="checkbox" ${t.done ? "checked" : ""} data-action="toggle-todo" />
+          <div style="flex:1;min-width:0;">
+            <div class="todo-text">${escapeHtml(t.title)}</div>
+            ${t.note ? `<div class="todo-meta">${escapeHtml(t.note)}</div>` : ""}
+            <div class="todo-meta">${formatTime(t.createdAt)}</div>
+          </div>
+          <button type="button" class="small danger" data-action="del-todo">删</button>
+        </div>
+      `).join("");
+    }
+
+    function addTodo(title, note) {
+      state.todos.push({
+        id: uid(), title: title.trim(), note: (note || "").trim(),
+        done: false, createdAt: Date.now()
+      });
+      saveState();
+      renderTodos();
+      showToast("待办已添加");
+    }
+    function toggleTodo(id) {
+      const t = state.todos.find((x) => x.id === id);
+      if (!t) return;
+      t.done = !t.done;
+      saveState();
+      renderTodos();
+    }
+    function deleteTodo(id) {
+      state.todos = state.todos.filter((x) => x.id !== id);
+      saveState();
+      renderTodos();
+      showToast("待办已删除");
+    }
+
+    // ========== 导入导出 ==========
+    function downloadJson() {
+      const data = getExportData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `info-dashboard-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast("JSON 已下载");
+    }
+
+    function importJson(text) {
+      try {
+        const data = JSON.parse(text);
+        if (!data || typeof data !== "object") throw new Error("根节点必须是对象");
+        if (data.messages && !Array.isArray(data.messages)) throw new Error("messages 应为数组");
+        if (data.todos && !Array.isArray(data.todos)) throw new Error("todos 应为数组");
+        if (data.calendarNotes && typeof data.calendarNotes !== "object") throw new Error("calendarNotes 应为对象");
+        if (Array.isArray(data.messages)) state.messages = data.messages;
+        if (data.calendarNotes) state.calendarNotes = data.calendarNotes;
+        if (Array.isArray(data.todos)) state.todos = data.todos;
+        saveState();
+        renderMessages();
+        renderCalendar();
+        renderTodos();
+        showToast("数据已导入");
+        return true;
+      } catch (e) {
+        showToast("导入失败：" + (e.message || e), "error");
+        return false;
+      }
+    }
+
+    function clearAllData() {
+      if (!confirm("确定清空全部留言、日历备注和待办？")) return;
+      state.messages = [];
+      state.calendarNotes = {};
+      state.todos = [];
+      saveState();
+      renderMessages();
+      renderCalendar();
+      renderTodos();
+      showToast("本地数据已清空");
+    }
+
+    // ========== 事件 ==========
+    function bindEvents() {
+      document.getElementById("btn-refresh-weather").addEventListener("click", loadWeather);
+
+      // 主题
+      document.getElementById("btn-settings").addEventListener("click", (e) => {
+        e.stopPropagation();
+        document.getElementById("settings-menu").classList.toggle("show");
+      });
+      document.addEventListener("click", () => {
+        document.getElementById("settings-menu").classList.remove("show");
+      });
+      document.getElementById("settings-menu").addEventListener("click", (e) => e.stopPropagation());
+      document.querySelectorAll('input[name="theme"]').forEach((r) => {
+        r.addEventListener("change", () => applyTheme(r.value));
+      });
+
+      // 颜色用户自定义标记
+      document.getElementById("msg-color").addEventListener("input", function () {
+        this.dataset.userSet = "1";
+      });
+
+      // 表情
+      const emojiBar = document.getElementById("emoji-bar");
+      EMOJIS.forEach((em) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.textContent = em;
+        b.addEventListener("click", () => {
+          const ta = document.getElementById("msg-content");
+          const start = ta.selectionStart;
+          const end = ta.selectionEnd;
+          const val = ta.value;
+          ta.value = val.slice(0, start) + em + val.slice(end);
+          ta.focus();
+          ta.selectionStart = ta.selectionEnd = start + em.length;
+        });
+        emojiBar.appendChild(b);
+      });
+
+      // 留言
+      document.getElementById("btn-add-msg").addEventListener("click", () => {
+        const author = document.getElementById("msg-author").value;
+        const content = document.getElementById("msg-content").value;
+        if (!content.trim()) { showToast("请输入留言内容", "error"); return; }
+        addMessage(author, content, getComposeStyle());
+        document.getElementById("msg-content").value = "";
+      });
+
+      document.getElementById("msg-list").addEventListener("click", (e) => {
+        const btn = e.target.closest("button");
+        if (!btn) return;
+        if (btn.dataset.action === "del-reply") {
+          deleteReply(btn.dataset.msg, btn.dataset.reply);
+          return;
+        }
+        const item = e.target.closest(".msg-item");
+        if (!item) return;
+        const id = item.dataset.id;
+        const action = btn.dataset.action;
+        if (action === "delete") deleteMessage(id);
+        else if (action === "edit") {
+          const current = state.messages.find((m) => m.id === id)?.content || "";
+          const next = prompt("修改留言内容：", current);
+          if (next != null && next.trim()) updateMessage(id, next);
+        } else if (action === "reply") {
+          item.querySelector('[data-role="reply-form"]').classList.toggle("show");
+        } else if (action === "cancel-reply") {
+          item.querySelector('[data-role="reply-form"]').classList.remove("show");
+        } else if (action === "submit-reply") {
+          const form = item.querySelector('[data-role="reply-form"]');
+          const author = form.querySelector('[data-role="reply-author"]').value;
+          const content = form.querySelector('[data-role="reply-content"]').value;
+          if (!content.trim()) { showToast("请输入跟帖内容", "error"); return; }
+          addReply(id, author, content);
+        }
+      });
+
+      // 日历
+      document.getElementById("cal-prev").addEventListener("click", () => {
+        if (state.calMonth === 0) { state.calMonth = 11; state.calYear--; }
+        else state.calMonth--;
+        renderCalendar();
+      });
+      document.getElementById("cal-next").addEventListener("click", () => {
+        if (state.calMonth === 11) { state.calMonth = 0; state.calYear++; }
+        else state.calMonth++;
+        renderCalendar();
+      });
+      document.getElementById("btn-add-note").addEventListener("click", () => {
+        const input = document.getElementById("day-note-input");
+        if (!input.value.trim()) { showToast("请输入备注", "error"); return; }
+        addDayNote(input.value);
+        input.value = "";
+      });
+      document.getElementById("day-notes").addEventListener("click", (e) => {
+        const btn = e.target.closest('[data-action="del-note"]');
+        if (btn) deleteDayNote(Number(btn.dataset.idx));
+      });
+
+      // 待办
+      document.getElementById("btn-add-todo").addEventListener("click", () => {
+        const title = document.getElementById("todo-title").value;
+        const note = document.getElementById("todo-note").value;
+        if (!title.trim()) { showToast("请输入待办标题", "error"); return; }
+        addTodo(title, note);
+        document.getElementById("todo-title").value = "";
+        document.getElementById("todo-note").value = "";
+      });
+      document.getElementById("todo-list").addEventListener("click", (e) => {
+        const item = e.target.closest(".todo-item");
+        if (!item) return;
+        const id = item.dataset.id;
+        if (e.target.dataset.action === "toggle-todo" || e.target.type === "checkbox") toggleTodo(id);
+        else if (e.target.dataset.action === "del-todo") deleteTodo(id);
+      });
+
+      // 导入导出
+      document.getElementById("btn-export").addEventListener("click", downloadJson);
+      document.getElementById("btn-import-open").addEventListener("click", () => {
+        document.getElementById("import-json").value = "";
+        document.getElementById("import-modal").classList.add("show");
+      });
+      document.getElementById("btn-import-cancel").addEventListener("click", () => {
+        document.getElementById("import-modal").classList.remove("show");
+      });
+      document.getElementById("btn-import-confirm").addEventListener("click", () => {
+        const text = document.getElementById("import-json").value.trim();
+        if (!text) { showToast("请粘贴 JSON", "error"); return; }
+        if (importJson(text)) document.getElementById("import-modal").classList.remove("show");
+      });
+      document.getElementById("import-modal").addEventListener("click", (e) => {
+        if (e.target.id === "import-modal") e.target.classList.remove("show");
+      });
+      document.getElementById("btn-clear-all").addEventListener("click", clearAllData);
+    }
+
+    function init() {
+      loadTheme();
+      loadState();
+      state.selectedDate = todayKey();
+      updateClock();
+      setInterval(updateClock, 1000);
+      renderMessages();
+      renderCalendar();
+      renderTodos();
+      bindEvents();
+      loadWeather();
+      setInterval(loadWeather, WEATHER_REFRESH_MS);
+    }
+    init();
+  </script>
+</body>
+</html>
